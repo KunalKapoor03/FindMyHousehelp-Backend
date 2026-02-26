@@ -8,6 +8,16 @@ const role = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
+/* ------------------ Get All Maids (Public) ------------------ */
+router.get("/", async (req, res) => {
+  try {
+    const maids = await Maid.find({ is_available: true });
+    res.json(maids);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 /* ------------------ Dashboard ------------------ */
 router.get("/dashboard", auth, role("maid"), async (req, res) => {
   try {
