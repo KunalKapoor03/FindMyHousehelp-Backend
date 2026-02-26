@@ -1,10 +1,10 @@
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const Maid = require("../models/Maid");
 const User = require("../models/User");
 const Booking = require("../models/Booking");
 const auth = require("../middleware/authMiddleware");
 const role = require("../middleware/roleMiddleware");
-const bcrypt = require("bcryptjs");
 
 const router = express.Router();
 
@@ -27,7 +27,6 @@ router.get("/dashboard", auth, role("maid"), async (req, res) => {
       maid: maid._id,
       status: "completed",
     });
-
     const user = await User.findById(req.user.id).select("-password");
 
     res.json({ name: user.full_name, pending, upcoming, completed });
@@ -55,7 +54,6 @@ router.get("/bookings", auth, role("maid"), async (req, res) => {
       date: b.booking_date,
       status: b.status,
     }));
-
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -68,10 +66,8 @@ router.put("/bookings/:id", auth, role("maid"), async (req, res) => {
     const { status } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
-
     booking.status = status === "upcoming" ? "accepted" : status;
     await booking.save();
-
     res.json(booking);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -83,7 +79,6 @@ router.get("/profile", auth, role("maid"), async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
     const maid = await Maid.findOne({ user: req.user.id });
-
     res.json({
       full_name: user.full_name,
       email: user.email,
@@ -113,7 +108,6 @@ router.put("/profile", auth, role("maid"), async (req, res) => {
       hourly_rate,
       address,
     } = req.body;
-
     await User.findByIdAndUpdate(req.user.id, { full_name, phone });
 
     const parsedServices = (() => {
@@ -147,7 +141,6 @@ router.put("/profile", auth, role("maid"), async (req, res) => {
       },
       { new: true },
     );
-
     res.json({ message: "Profile updated successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -158,15 +151,12 @@ router.put("/profile", auth, role("maid"), async (req, res) => {
 router.put("/change-password", auth, role("maid"), async (req, res) => {
   try {
     const { current_password, new_password } = req.body;
-
     const user = await User.findById(req.user.id);
     const isMatch = await bcrypt.compare(current_password, user.password);
     if (!isMatch)
       return res.status(400).json({ message: "Current password is incorrect" });
-
     user.password = await bcrypt.hash(new_password, 10);
     await user.save();
-
     res.json({ message: "Password changed successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -178,10 +168,8 @@ router.patch("/availability", auth, role("maid"), async (req, res) => {
   try {
     const maid = await Maid.findOne({ user: req.user.id });
     if (!maid) return res.status(404).json({ message: "Maid not found" });
-
     maid.is_available = !maid.is_available;
     await maid.save();
-
     res.json({ is_available: maid.is_available });
   } catch (error) {
     res.status(500).json({ message: error.message });

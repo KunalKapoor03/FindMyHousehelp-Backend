@@ -1,24 +1,22 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const multer = require("multer");
+const fs = require("fs");
 const User = require("../models/User");
 const Maid = require("../models/Maid");
 const generateToken = require("../utils/generateToken");
 
 const router = express.Router();
 
-// Multer setup - store files in memory (or disk if you want to save them)
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
 
-// Make sure uploads folder exists
-const fs = require("fs");
-if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
-
-/* ------------------ REGISTER (Customer) ------------------ */
+/* ------------------ REGISTER CUSTOMER ------------------ */
 router.post("/register", async (req, res) => {
   try {
     const { full_name, email, password, phone, role } = req.body;
@@ -33,7 +31,6 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Email already registered" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       full_name,
       email,
@@ -43,7 +40,6 @@ router.post("/register", async (req, res) => {
     });
 
     const token = generateToken(user);
-
     res.status(201).json({
       token,
       user: {
@@ -59,7 +55,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-/* ------------------ REGISTER MAID (multipart/form-data) ------------------ */
+/* ------------------ REGISTER MAID ------------------ */
 router.post(
   "/register/maid",
   upload.fields([
@@ -91,7 +87,6 @@ router.post(
         return res.status(400).json({ message: "Email already registered" });
 
       const hashedPassword = await bcrypt.hash(password, 10);
-
       const user = await User.create({
         full_name,
         email,
@@ -109,7 +104,6 @@ router.post(
           return [];
         }
       })();
-
       const parsedLanguages = (() => {
         try {
           return typeof languages === "string"
@@ -131,7 +125,6 @@ router.post(
       });
 
       const token = generateToken(user);
-
       res.status(201).json({
         token,
         user: {
@@ -167,10 +160,11 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
 
     if (!user.isActive)
-      return res.status(403).json({ message: "Account suspended" });
+      return res
+        .status(403)
+        .json({ message: "Account suspended. Contact support." });
 
     const token = generateToken(user);
-
     res.json({
       token,
       user: {
