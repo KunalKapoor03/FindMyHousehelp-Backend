@@ -41,8 +41,13 @@ router.post("/", auth, async (req, res) => {
 ===================================================== */
 router.get("/my", auth, async (req, res) => {
   try {
+    const maidProfile = await Maid.findOne({ user: req.user.id });
+
     const bookings = await Booking.find({
-      $or: [{ customer: req.user.id }, { maid: req.user.id }],
+      $or: [
+        { customer: req.user.id },
+        ...(maidProfile ? [{ maid: maidProfile._id }] : []),
+      ],
     })
       .populate("customer", "-password")
       .populate({

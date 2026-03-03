@@ -11,7 +11,11 @@ const router = express.Router();
 /* ------------------ Get All Maids (Public) ------------------ */
 router.get("/", async (req, res) => {
   try {
-    const maids = await Maid.find({ is_available: true });
+    const maids = await Maid.find({
+      is_available: true,
+      is_approved: true,
+    }).populate("user", "-password");
+
     res.json(maids);
   } catch (error) {
     res.status(500).json({ message: error.message });
