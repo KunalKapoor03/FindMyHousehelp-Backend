@@ -7,6 +7,24 @@ const auth = require("../middleware/authMiddleware");
 const router = express.Router();
 
 /* =====================================================
+   GET ALL BOOKINGS (Admin)
+===================================================== */
+router.get("/", auth, async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate("customer", "-password")
+      .populate({
+        path: "maid",
+        populate: { path: "user", select: "-password" },
+      });
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* =====================================================
    CREATE BOOKING (Customer)
 ===================================================== */
 router.post("/", auth, async (req, res) => {
