@@ -241,4 +241,27 @@ router.get("/:id/reviews", async (req, res) => {
   }
 });
 
+router.get("/maids", async (req, res) => {
+  try {
+    const maids = await Maid.find({ is_approved: true }).populate(
+      "user",
+      "-password",
+    );
+
+    const result = maids.map((m) => ({
+      id: m._id,
+      full_name: m.user?.full_name,
+      preferred_work_location: m.preferred_location,
+      services: m.services || [],
+      hourly_rate: m.hourly_rate,
+      rating: m.rating,
+      available: m.is_available,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
