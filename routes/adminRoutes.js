@@ -188,4 +188,28 @@ router.patch("/support/:id", auth, role("admin"), async (req, res) => {
   }
 });
 
+router.get("/", auth, async (req, res) => {
+  try {
+    const bookings = await Booking.find({ customer: req.user.id })
+      .populate({
+        path: "maid",
+        populate: { path: "user", select: "full_name" },
+      })
+      .sort({ createdAt: -1 });
+
+    const result = bookings.map((b) => ({
+      id: b._id,
+      maid_name: b.maid?.user?.full_name || "Unknown",
+      service: b.service,
+      booking_date: b.booking_date,
+      status: b.status,
+      total_charge: b.total_charge,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
