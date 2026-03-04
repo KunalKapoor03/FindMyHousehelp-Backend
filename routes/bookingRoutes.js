@@ -168,29 +168,28 @@ router.patch("/:id/cancel", auth, async (req, res) => {
 
 /* ================= ADD REVIEW ================= */
 
-router.post("/:id/review", auth, async (req, res) => {
-  try {
-    const { rating, comment } = req.body;
+router.post(
+  "/bookings/:id/review",
+  auth,
+  role("customer"),
+  async (req, res) => {
+    try {
+      const booking = await Booking.findById(req.params.id);
 
-    const booking = await Booking.findById(req.params.id);
+      if (!booking)
+        return res.status(404).json({ message: "Booking not found" });
 
-    if (!booking) return res.status(404).json({ message: "Booking not found" });
+      const review = await Review.create({
+        customer: req.user.id,
+        maid: booking.maid,
+        rating: req.body.rating,
+        comment: req.body.comment,
+      });
 
-    if (booking.status !== "completed")
-      return res.status(400).json({ message: "Cannot review yet" });
-
-    const review = await Review.create({
-      booking: booking._id,
-      maid: booking.maid,
-      customer: req.user.id,
-      rating,
-      comment,
-    });
-
-    res.status(201).json(review);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
+      res.json(review);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
 module.exports = router;
