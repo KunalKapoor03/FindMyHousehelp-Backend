@@ -264,4 +264,17 @@ router.get("/maids", async (req, res) => {
   }
 });
 
+router.get("/maids/:id/reviews", async (req, res) => {
+  try {
+    const reviews = await Review.find({ maid: req.params.id }).populate(
+      "customer",
+      "full_name",
+    );
+
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
