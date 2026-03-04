@@ -69,6 +69,39 @@ router.get("/maids", auth, role("customer"), async (req, res) => {
   }
 });
 
+/* ------------------ Get Single Maid Profile ------------------ */
+router.get("/maids/:id", auth, role("customer"), async (req, res) => {
+  try {
+    const maid = await Maid.findById(req.params.id).populate(
+      "user",
+      "-password",
+    );
+
+    if (!maid) {
+      return res.status(404).json({ message: "Maid not found" });
+    }
+
+    const result = {
+      id: maid._id,
+      full_name: maid.user?.full_name,
+      email: maid.user?.email,
+      phone: maid.user?.phone,
+      services: maid.services || [],
+      languages: maid.languages || [],
+      preferred_location: maid.preferred_location,
+      years_of_experience: maid.experience_years,
+      hourly_rate: maid.hourly_rate,
+      rating: maid.rating,
+      total_reviews: maid.total_reviews,
+      is_available: maid.is_available,
+    };
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 /* ================= BOOKINGS ================= */
 
 router.get("/bookings", auth, role("customer"), async (req, res) => {
