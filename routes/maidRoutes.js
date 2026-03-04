@@ -11,14 +11,23 @@ const router = express.Router();
 /* ------------------ Get All Maids (Public) ------------------ */
 router.get("/", async (req, res) => {
   try {
-    const maids = await Maid.find({
-      is_available: true,
-      is_approved: true,
-    }).populate("user", "-password");
+    const maids = await Maid.find({ is_approved: true }).populate(
+      "user",
+      "-password",
+    );
 
-    res.json(maids);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const result = maids.map((m) => ({
+      _id: m._id,
+      full_name: m.user?.full_name,
+      location: m.preferred_location,
+      hourly_rate: m.hourly_rate,
+      rating: m.rating,
+      is_available: m.is_available,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
