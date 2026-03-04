@@ -199,4 +199,32 @@ router.patch("/availability", auth, role("maid"), async (req, res) => {
   }
 });
 
+// Get single maid profile
+router.get("/:id", async (req, res) => {
+  try {
+    const maid = await Maid.findById(req.params.id).populate(
+      "user",
+      "-password",
+    );
+
+    if (!maid) {
+      return res.status(404).json({ message: "Maid not found" });
+    }
+
+    const result = {
+      _id: maid._id,
+      full_name: maid.user?.full_name,
+      preferred_location: maid.preferred_location,
+      hourly_rate: maid.hourly_rate,
+      rating: maid.rating,
+      services: maid.services,
+      is_available: maid.is_available,
+    };
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
