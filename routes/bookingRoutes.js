@@ -3,6 +3,7 @@ const Booking = require("../models/Booking");
 const Maid = require("../models/Maid");
 const Review = require("../models/Review");
 const auth = require("../middleware/authMiddleware");
+const role = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
