@@ -30,7 +30,8 @@ router.get("/", auth, async (req, res) => {
 ===================================================== */
 router.post("/", auth, async (req, res) => {
   try {
-    const { maidId, booking_date, start_time, duration_hours } = req.body;
+    const { maidId, service, booking_date, start_time, duration_hours } =
+      req.body;
 
     const maid = await Maid.findById(maidId);
 
@@ -43,6 +44,7 @@ router.post("/", auth, async (req, res) => {
     const booking = await Booking.create({
       customer: req.user.id,
       maid: maidId,
+      service,
       booking_date,
       start_time,
       duration_hours,
