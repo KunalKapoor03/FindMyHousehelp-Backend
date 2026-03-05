@@ -39,6 +39,7 @@ router.post("/", auth, async (req, res) => {
       return res.status(400).json({ message: "Maid unavailable" });
     }
 
+    const hours = Number(duration_hours);
     const total_charge = maid.hourly_rate * duration_hours;
 
     const booking = await Booking.create({
@@ -47,7 +48,7 @@ router.post("/", auth, async (req, res) => {
       service,
       booking_date,
       start_time,
-      duration_hours,
+      duration_hours: hours,
       total_charge,
     });
 
@@ -243,10 +244,6 @@ router.get("/maid/earnings", auth, role("maid"), async (req, res) => {
   try {
     const maid = await Maid.findOne({ user: req.user.id });
 
-    if (!maid) {
-      return res.status(404).json({ message: "Maid profile not found" });
-    }
-
     const bookings = await Booking.find({
       maid: maid._id,
       status: "completed",
@@ -257,21 +254,19 @@ router.get("/maid/earnings", auth, role("maid"), async (req, res) => {
     let month = 0;
 
     const now = new Date();
-    const weekAgo = new Date();
-    const monthAgo = new Date();
-
-    weekAgo.setDate(now.getDate() - 7);
-    monthAgo.setMonth(now.getMonth() - 1);
 
     bookings.forEach((b) => {
-      total += b.total_charge;
+      const price = Number(b.total_charge) || 0;
+      total += price;
 
-      if (new Date(b.createdAt) >= weekAgo) {
-        week += b.total_charge;
+      const date = new Date(b.booking_date);
+
+      if ((now - date) / (1000 * 60 * 60 * 24) <= 7) {
+        week += price;
       }
 
-      if (new Date(b.createdAt) >= monthAgo) {
-        month += b.total_charge;
+      if (date.getMonth() === now.getMonth()) {
+        month += price;
       }
     });
 
@@ -280,8 +275,8 @@ router.get("/maid/earnings", auth, role("maid"), async (req, res) => {
       month,
       total,
     });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
