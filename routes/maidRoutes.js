@@ -277,4 +277,36 @@ router.get("/maids/:id/reviews", async (req, res) => {
   }
 });
 
+router.patch("/maid/availability", auth, role("maid"), async (req, res) => {
+  const maid = await Maid.findOne({ user: req.user.id });
+
+  maid.is_available = req.body.available;
+
+  await maid.save();
+
+  res.json({ available: maid.is_available });
+});
+
+router.put("/maid/change-password", auth, role("maid"), async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    const match = await bcrypt.compare(current_password, user.password);
+
+    if (!match) {
+      return res.status(400).json({ message: "Current password incorrect" });
+    }
+
+    user.password = await bcrypt.hash(new_password, 10);
+
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
