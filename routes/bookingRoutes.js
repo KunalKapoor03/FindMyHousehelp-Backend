@@ -193,4 +193,46 @@ router.post(
     }
   },
 );
+
+router.get("/maid/earnings", auth, async (req, res) => {
+  try {
+    const maidProfile = await Maid.findOne({ user: req.user.id });
+
+    if (!maidProfile) {
+      return res.status(404).json({ message: "Maid profile not found" });
+    }
+
+    const bookings = await Booking.find({
+      maid: maidProfile._id,
+      status: "completed",
+    });
+
+    const total = bookings.reduce((sum, b) => sum + b.total_charge, 0);
+
+    const now = new Date();
+
+    const startOfWeek = new Date();
+    startOfWeek.setDate(now.getDate() - 7);
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+
+    const weekly = bookings
+      .filter((b) => new Date(b.booking_date) >= startOfWeek)
+      .reduce((sum, b) => sum + b.total_charge, 0);
+
+    const monthly = bookings
+      .filter((b) => new Date(b.booking_date) >= startOfMonth)
+      .reduce((sum, b) => sum + b.total_charge, 0);
+
+    res.json({
+      week: weekly,
+      month: monthly,
+      total,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
