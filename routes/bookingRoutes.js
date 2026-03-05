@@ -235,4 +235,52 @@ router.get("/maid/earnings", auth, async (req, res) => {
   }
 });
 
+/* ================= MAID EARNINGS ================= */
+
+router.get("/maid/earnings", auth, role("maid"), async (req, res) => {
+  try {
+    const maid = await Maid.findOne({ user: req.user.id });
+
+    if (!maid) {
+      return res.status(404).json({ message: "Maid profile not found" });
+    }
+
+    const bookings = await Booking.find({
+      maid: maid._id,
+      status: "completed",
+    });
+
+    let total = 0;
+    let week = 0;
+    let month = 0;
+
+    const now = new Date();
+    const weekAgo = new Date();
+    const monthAgo = new Date();
+
+    weekAgo.setDate(now.getDate() - 7);
+    monthAgo.setMonth(now.getMonth() - 1);
+
+    bookings.forEach((b) => {
+      total += b.total_charge;
+
+      if (new Date(b.createdAt) >= weekAgo) {
+        week += b.total_charge;
+      }
+
+      if (new Date(b.createdAt) >= monthAgo) {
+        month += b.total_charge;
+      }
+    });
+
+    res.json({
+      week,
+      month,
+      total,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
