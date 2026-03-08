@@ -91,7 +91,7 @@ router.get("/bookings", auth, role("maid"), async (req, res) => {
       customer_name: b.customer?.full_name || "Unknown",
       customer_phone: b.customer?.phone || "",
       service: b.service,
-      date: b.booking_date,
+      date: b.booking_date ? new Date(b.booking_date).toISOString() : null,
       time: b.start_time,
       duration: b.duration_hours,
       total_charge: b.total_charge,

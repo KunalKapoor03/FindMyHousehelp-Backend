@@ -19,7 +19,15 @@ router.get("/", auth, async (req, res) => {
         populate: { path: "user", select: "-password" },
       });
 
-    res.json(bookings);
+    const formatted = bookings.map((b) => ({
+      ...b._doc,
+      booking_date: b.booking_date
+        ? new Date(b.booking_date).toISOString()
+        : null,
+      total_charge: b.total_charge || 0,
+    }));
+
+    res.json(formatted);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
