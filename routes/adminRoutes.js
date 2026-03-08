@@ -127,7 +127,10 @@ router.get("/bookings", auth, role("admin"), async (req, res) => {
       service: b.service,
       date: b.booking_date
         ? new Date(b.booking_date).toLocaleDateString("en-IN")
-        : "—",
+        : b.createdAt
+          ? new Date(b.createdAt).toLocaleDateString("en-IN") // ✅ fallback
+          : "—",
+      time: b.start_time || "—",
       status: b.status,
       total_charge: b.total_charge,
       createdAt: b.createdAt,
