@@ -19,15 +19,15 @@ const bookingSchema = new mongoose.Schema(
 );
 
 // Automatically calculate total_charge if duration and maid rate are available
-bookingSchema.pre("save", async function (next) {
-  if (this.isModified("duration_hours") || this.isNew) {
-    const Maid = mongoose.model("Maid");
-    const maidData = await Maid.findById(this.maid);
-    if (maidData && this.duration_hours) {
-      this.total_charge = maidData.hourly_rate * this.duration_hours;
-    }
-  }
-  next();
-});
+// bookingSchema.pre("save", async function (next) {
+//   if (this.isModified("duration_hours") || this.isNew) {
+//     const Maid = mongoose.model("Maid");
+//     const maidData = await Maid.findById(this.maid);
+//     if (maidData && this.duration_hours) {
+//       this.total_charge = maidData.hourly_rate * this.duration_hours;
+//     }
+//   }
+//   next();
+// });
 
 module.exports = mongoose.model("Booking", bookingSchema);
