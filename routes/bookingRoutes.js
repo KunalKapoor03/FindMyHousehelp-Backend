@@ -88,10 +88,13 @@ router.get("/my", auth, async (req, res) => {
     // FIX: Mapping the results to ensure date and charge are clean
     const formattedBookings = bookings.map((b) => ({
       ...b._doc,
+      // ✅ Try both field names, fallback to createdAt
       booking_date: b.booking_date
         ? new Date(b.booking_date).toISOString()
-        : null,
-      total_charge: b.total_charge || 0,
+        : b.date
+          ? new Date(b.date).toISOString()
+          : new Date(b.createdAt).toISOString(),
+      total_charge: Number(b.total_charge) || 0,
     }));
 
     res.json(formattedBookings);

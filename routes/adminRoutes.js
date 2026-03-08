@@ -125,10 +125,9 @@ router.get("/bookings", auth, role("admin"), async (req, res) => {
       customer_email: b.customer?.email || "",
       maid_name: b.maid?.user?.full_name || "Unknown",
       service: b.service,
-      date:
-        b.booking_date || booking.date
-          ? new Date(b.booking_date || b.date).toLocaleDateString("en-IN")
-          : "—",
+      date: b.booking_date
+        ? new Date(b.booking_date).toLocaleDateString("en-IN")
+        : "—",
       status: b.status,
       total_charge: b.total_charge,
       createdAt: b.createdAt,
