@@ -107,51 +107,43 @@ router.patch("/:id/status", auth, async (req, res) => {
 /* =====================================================
    ADD REVIEW (Only After Completion)
 ===================================================== */
+
 router.post("/:id/review", auth, async (req, res) => {
   try {
     const { rating, comment } = req.body;
 
     const booking = await Booking.findById(req.params.id);
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
 
     if (booking.status !== "completed") {
-      return res.status(400).json({
-        message: "Cannot review before completion",
-      });
+      return res
+        .status(400)
+        .json({ message: "Cannot review before completion" });
     }
 
-    const existingReview = await Review.findOne({
-      booking: booking._id,
-    });
+    // Check if review exists
+    const existingReview = await Review.findOne({ booking: booking._id });
+    if (existingReview)
+      return res.status(400).json({ message: "Review already submitted" });
 
-    if (existingReview) {
-      return res.status(400).json({
-        message: "Review already submitted",
-      });
-    }
-
+    // FIX: Include the customer ID from the booking
     const review = await Review.create({
       booking: booking._id,
       maid: booking.maid,
-      rating,
+      customer: booking.customer, // CRITICAL FIX: Link the customer
+      rating: Number(rating),
       comment,
     });
 
-    /* ===============================
-       UPDATE MAID RATING
-    =============================== */
-
+    /* UPDATE MAID RATING */
     const maid = await Maid.findById(booking.maid);
+    const currentTotalPoints = (maid.rating || 0) * (maid.total_reviews || 0);
+    const newTotalReviews = (maid.total_reviews || 0) + 1;
 
-    const newTotal = maid.rating * maid.total_reviews + rating;
-
-    maid.total_reviews += 1;
-    maid.rating = newTotal / maid.total_reviews;
+    maid.total_reviews = newTotalReviews;
+    maid.rating = (currentTotalPoints + Number(rating)) / newTotalReviews;
 
     await maid.save();
-
     res.status(201).json(review);
   } catch (error) {
     res.status(500).json({ message: error.message });

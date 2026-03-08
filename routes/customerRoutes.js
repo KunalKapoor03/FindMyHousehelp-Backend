@@ -131,9 +131,10 @@ router.get("/bookings", auth, role("customer"), async (req, res) => {
 
 /* ================= CREATE BOOKING ================= */
 
+/* ================= CORRECTED CREATE BOOKING ================= */
 router.post("/bookings", auth, role("customer"), async (req, res) => {
   try {
-    const { maid_id, service, date } = req.body;
+    const { maid_id, service, date, start_time, duration_hours } = req.body;
 
     const maid = await Maid.findById(maid_id);
 
@@ -141,11 +142,18 @@ router.post("/bookings", auth, role("customer"), async (req, res) => {
       return res.status(400).json({ message: "Maid unavailable" });
     }
 
+    // FIX: Calculate total charge before saving
+    const hours = Number(duration_hours) || 1;
+    const total_charge = maid.hourly_rate * hours;
+
     const booking = await Booking.create({
       customer: req.user.id,
       maid: maid_id,
       service,
       booking_date: date,
+      start_time: start_time || "Not Specified",
+      duration_hours: hours,
+      total_charge: total_charge, // Now correctly saved in DB
       status: "pending",
     });
 
