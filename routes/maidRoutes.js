@@ -41,42 +41,32 @@ MAID DASHBOARD STATS
 router.get("/dashboard", auth, role("maid"), async (req, res) => {
   try {
     const maid = await Maid.findOne({ user: req.user.id });
-    if (!maid)
-      return res.status(404).json({ message: "Maid profile not found" });
+    if (!maid) return res.status(404).json({ message: "Maid not found" });
 
-    // Calculate Total Earnings using Aggregation
+    // FIX: Correctly Summing Earnings for THIS maid
     const earningsStats = await Booking.aggregate([
       { $match: { maid: maid._id, status: "completed" } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$total_charge" },
-        },
-      },
+      { $group: { _id: null, total: { $sum: "$total_charge" } } },
     ]);
 
-    const totalEarnings = earningsStats.length > 0 ? earningsStats[0].total : 0;
-    const pending = await Booking.countDocuments({
-      maid: maid._id,
-      status: "pending",
-    });
-    const upcoming = await Booking.countDocuments({
-      maid: maid._id,
-      status: "accepted",
-    });
-    const completed = await Booking.countDocuments({
-      maid: maid._id,
-      status: "completed",
-    });
-    const user = await User.findById(req.user.id).select("-password");
+    const stats = {
+      name: (await User.findById(req.user.id)).full_name,
+      totalEarnings: earningsStats[0]?.total || 0, // This is the key fix
+      pending: await Booking.countDocuments({
+        maid: maid._id,
+        status: "pending",
+      }),
+      upcoming: await Booking.countDocuments({
+        maid: maid._id,
+        status: "accepted",
+      }),
+      completed: await Booking.countDocuments({
+        maid: maid._id,
+        status: "completed",
+      }),
+    };
 
-    res.json({
-      name: user.full_name,
-      pending,
-      upcoming,
-      completed,
-      totalEarnings, // Now sending the actual money amount
-    });
+    res.json(stats);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

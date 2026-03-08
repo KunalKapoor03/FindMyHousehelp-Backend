@@ -61,23 +61,34 @@ router.post("/", auth, async (req, res) => {
 /* =====================================================
    GET MY BOOKINGS (Customer or Maid)
 ===================================================== */
+/* =====================================================
+   GET MY BOOKINGS (Customer or Maid) - UPDATED
+===================================================== */
 router.get("/my", auth, async (req, res) => {
   try {
     const maidProfile = await Maid.findOne({ user: req.user.id });
-
     const bookings = await Booking.find({
       $or: [
         { customer: req.user.id },
         ...(maidProfile ? [{ maid: maidProfile._id }] : []),
       ],
     })
-      .populate("customer", "-password")
+      .populate("customer", "full_name phone")
       .populate({
         path: "maid",
-        populate: { path: "user", select: "-password" },
+        populate: { path: "user", select: "full_name" },
       });
 
-    res.json(bookings);
+    // FIX: Mapping the results to ensure date and charge are clean
+    const formattedBookings = bookings.map((b) => ({
+      ...b._doc,
+      booking_date: b.booking_date
+        ? new Date(b.booking_date).toISOString()
+        : null,
+      total_charge: b.total_charge || 0,
+    }));
+
+    res.json(formattedBookings);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -111,37 +122,31 @@ router.patch("/:id/status", auth, async (req, res) => {
 router.post("/:id/review", auth, async (req, res) => {
   try {
     const { rating, comment } = req.body;
-
     const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-    if (booking.status !== "completed") {
+    if (!booking || booking.status !== "completed") {
       return res
         .status(400)
-        .json({ message: "Cannot review before completion" });
+        .json({ message: "Invalid booking or not completed" });
     }
 
-    // Check if review exists
-    const existingReview = await Review.findOne({ booking: booking._id });
-    if (existingReview)
-      return res.status(400).json({ message: "Review already submitted" });
-
-    // FIX: Include the customer ID from the booking
     const review = await Review.create({
       booking: booking._id,
       maid: booking.maid,
-      customer: booking.customer, // CRITICAL FIX: Link the customer
+      customer: booking.customer,
       rating: Number(rating),
       comment,
     });
 
-    /* UPDATE MAID RATING */
+    /* UPDATE MAID RATING WITH ROUNDING */
     const maid = await Maid.findById(booking.maid);
     const currentTotalPoints = (maid.rating || 0) * (maid.total_reviews || 0);
     const newTotalReviews = (maid.total_reviews || 0) + 1;
 
+    // FIX: Rounding to 1 decimal place (e.g., 4.8)
+    const newAverage = (currentTotalPoints + Number(rating)) / newTotalReviews;
+    maid.rating = Math.round(newAverage * 10) / 10;
     maid.total_reviews = newTotalReviews;
-    maid.rating = (currentTotalPoints + Number(rating)) / newTotalReviews;
 
     await maid.save();
     res.status(201).json(review);
