@@ -235,6 +235,21 @@ router.patch("/availability", auth, role("maid"), async (req, res) => {
 });
 
 /* =====================================================
+GET MAID REVIEWS
+===================================================== */
+router.get("/:id/reviews", async (req, res) => {
+  try {
+    const reviews = await Review.find({ maid: req.params.id })
+      .populate("customer", "full_name")
+      .sort({ createdAt: -1 });
+
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* =====================================================
 GET SINGLE MAID PROFILE
 ===================================================== */
 router.get("/:id", async (req, res) => {
@@ -257,21 +272,6 @@ router.get("/:id", async (req, res) => {
       services: maid.services,
       is_available: maid.is_available,
     });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-/* =====================================================
-GET MAID REVIEWS
-===================================================== */
-router.get("/:id/reviews", async (req, res) => {
-  try {
-    const reviews = await Review.find({ maid: req.params.id })
-      .populate("customer", "full_name")
-      .sort({ createdAt: -1 });
-
-    res.json(reviews);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

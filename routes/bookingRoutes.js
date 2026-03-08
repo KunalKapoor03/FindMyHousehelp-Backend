@@ -61,9 +61,7 @@ router.post("/", auth, async (req, res) => {
 /* =====================================================
    GET MY BOOKINGS (Customer or Maid)
 ===================================================== */
-/* =====================================================
-   GET MY BOOKINGS (Customer or Maid) - UPDATED
-===================================================== */
+
 router.get("/my", auth, async (req, res) => {
   try {
     const maidProfile = await Maid.findOne({ user: req.user.id });
@@ -194,84 +192,47 @@ router.post(
   },
 );
 
-router.get("/maid/earnings", auth, async (req, res) => {
-  try {
-    const maidProfile = await Maid.findOne({ user: req.user.id });
-
-    if (!maidProfile) {
-      return res.status(404).json({ message: "Maid profile not found" });
-    }
-
-    const bookings = await Booking.find({
-      maid: maidProfile._id,
-      status: "completed",
-    });
-
-    const total = bookings.reduce((sum, b) => sum + b.total_charge, 0);
-
-    const now = new Date();
-
-    const startOfWeek = new Date();
-    startOfWeek.setDate(now.getDate() - 7);
-
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-
-    const weekly = bookings
-      .filter((b) => new Date(b.booking_date) >= startOfWeek)
-      .reduce((sum, b) => sum + b.total_charge, 0);
-
-    const monthly = bookings
-      .filter((b) => new Date(b.booking_date) >= startOfMonth)
-      .reduce((sum, b) => sum + b.total_charge, 0);
-
-    res.json({
-      week: weekly,
-      month: monthly,
-      total,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
 /* ================= MAID EARNINGS ================= */
 
 router.get("/maid/earnings", auth, role("maid"), async (req, res) => {
   try {
     const maid = await Maid.findOne({ user: req.user.id });
+    if (!maid) return res.status(404).json({ message: "Maid not found" });
 
-    const bookings = await Booking.find({
+    const stats = await Booking.aggregate([
+      { $match: { maid: maid._id, status: "completed" } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$total_charge" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const totalEarnings = stats.length > 0 ? stats[0].total : 0;
+
+    const now = new Date();
+    const allCompleted = await Booking.find({
       maid: maid._id,
       status: "completed",
     });
 
-    let total = 0;
-    let week = 0;
-    let month = 0;
+    const monthly = allCompleted
+      .filter(
+        (b) =>
+          new Date(b.booking_date).getMonth() === now.getMonth() &&
+          new Date(b.booking_date).getFullYear() === now.getFullYear(),
+      )
+      .reduce((sum, b) => sum + (Number(b.total_charge) || 0), 0);
 
-    const now = new Date();
+    const startOfWeek = new Date();
+    startOfWeek.setDate(now.getDate() - 7);
+    const weekly = allCompleted
+      .filter((b) => new Date(b.booking_date) >= startOfWeek)
+      .reduce((sum, b) => sum + (Number(b.total_charge) || 0), 0);
 
-    bookings.forEach((b) => {
-      const price = Number(b.total_charge) || 0;
-      total += price;
-
-      const date = new Date(b.booking_date);
-
-      if ((now - date) / (1000 * 60 * 60 * 24) <= 7) {
-        week += price;
-      }
-
-      if (date.getMonth() === now.getMonth()) {
-        month += price;
-      }
-    });
-
-    res.json({
-      week,
-      month,
-      total,
-    });
+    res.json({ week: weekly, month: monthly, total: totalEarnings });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
